@@ -85,7 +85,7 @@ export const DIALOGUE_TURNS: PracticeTurn[] = [
     partnerPromptKo: '알겠어요. 가방 안에 무엇이 들어있나요?',
     targetSentence: 'My English book is in it.',
     targetSentenceKo: '안에 제 영어책이 있어요.',
-    keyWords: ['english', 'book'],
+    keyWords: ['English', 'book'],
     smallWords: ['my', 'is', 'in', 'it'],
     chunk1: 'My English book',
     chunk2: 'is in it.',

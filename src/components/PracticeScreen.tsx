@@ -268,7 +268,7 @@ export const PracticeScreen: React.FC<PracticeScreenProps> = ({
                     key={kw}
                     className="px-2.5 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold rounded-lg shadow-2xs"
                   >
-                    [{kw}]
+                    {kw}
                   </span>
                 ))}
               </div>
