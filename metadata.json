@@ -1,0 +1,6 @@
+{
+  "name": "Found It! — Lost & Found Talk",
+  "description": "School lost-and-found speaking practice app for middle school students.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
