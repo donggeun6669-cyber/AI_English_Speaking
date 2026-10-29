@@ -23,7 +23,7 @@ export const StartScreen: React.FC<StartScreenProps> = ({ onStart }) => {
 
         {/* Sam at the desk illustration */}
         <div className="w-full mt-4 mb-2">
-          <SamAtDeskIllustration className="w-full h-44" />
+          <SamAtDeskIllustration className="w-full h-56" />
         </div>
       </div>
 

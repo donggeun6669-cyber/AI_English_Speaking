@@ -90,7 +90,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
 
         {/* Sam handing back the blue bag illustration */}
         <div className="w-full mt-1 mb-1">
-          <SamHandingBagIllustration className="w-full h-40" />
+          <SamHandingBagIllustration className="w-full h-52" />
         </div>
 
         {/* Stars */}
