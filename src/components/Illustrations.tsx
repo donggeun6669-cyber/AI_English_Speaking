@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { LostItem } from '../types';
 
 /**
  * Illustrations made in Google Stitch (2026-10-29), served from public/images.
@@ -21,17 +22,28 @@ export const SamAtDeskIllustration: React.FC<{ className?: string }> = ({ classN
 };
 
 /**
- * Sam Handing Back the Blue Bag Illustration (Screen 3)
+ * Sam handing back the lost item (Result Screen). Falls back to the item emoji if the picture is missing.
  */
-export const SamHandingBagIllustration: React.FC<{ className?: string }> = ({ className = 'w-full h-44' }) => {
+export const SamHandingItemIllustration: React.FC<{ item: LostItem; className?: string }> = ({
+  item,
+  className = 'w-full h-44',
+}) => {
+  const [failed, setFailed] = useState(false);
   return (
     <div className={`flex items-center justify-center ${className}`}>
-      <img
-        src="/images/sam-bag.jpg"
-        alt="Sam happily handing back the blue backpack"
-        className="h-full w-auto max-w-full rounded-2xl object-cover shadow-sm"
-        draggable={false}
-      />
+      {failed ? (
+        <div className="h-full aspect-square max-h-40 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-7xl">
+          <span role="img" aria-label={item.resultAlt}>{item.emoji}</span>
+        </div>
+      ) : (
+        <img
+          src={item.resultImage}
+          alt={item.resultAlt}
+          className="h-full w-auto max-w-full rounded-2xl object-cover shadow-sm"
+          draggable={false}
+          onError={() => setFailed(true)}
+        />
+      )}
     </div>
   );
 };

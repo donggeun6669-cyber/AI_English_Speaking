@@ -1,14 +1,14 @@
 import React from 'react';
-import { RoundNumber } from '../types';
-import { DIALOGUE_TURNS } from '../data/dialogueData';
+import { PracticeTurn, RoundNumber } from '../types';
 import { SamAvatar } from './Illustrations';
 
 interface GetReadyScreenProps {
   round: RoundNumber;
+  turns: PracticeTurn[];
   onReady: () => void;
 }
 
-export const GetReadyScreen: React.FC<GetReadyScreenProps> = ({ round, onReady }) => {
+export const GetReadyScreen: React.FC<GetReadyScreenProps> = ({ round, turns, onReady }) => {
   const getRoundInfo = (r: RoundNumber) => {
     switch (r) {
       case 1:
@@ -53,7 +53,7 @@ export const GetReadyScreen: React.FC<GetReadyScreenProps> = ({ round, onReady }
 
       {/* 5 Small Cards (one per turn) */}
       <div className="my-auto py-3 space-y-2 max-h-[58vh] overflow-y-auto pr-0.5">
-        {DIALOGUE_TURNS.map((turn, idx) => (
+        {turns.map((turn, idx) => (
           <div
             key={turn.id}
             className="bg-white rounded-xl p-3 border border-slate-200/90 shadow-2xs text-left"

@@ -3,7 +3,7 @@ import { PracticeTurn, TurnRecord, FeedbackInfo, RoundNumber } from '../types';
 import { SamAvatar } from './Illustrations';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { playTextToSpeech } from '../utils/speechUtils';
-import { evaluateSpeech, getSentenceWithGaps, extractWords } from '../utils/feedbackEngine';
+import { evaluateSpeech, getSentenceWithGaps, findMissingKeyWords } from '../utils/feedbackEngine';
 
 interface PracticeScreenProps {
   turn: PracticeTurn;
@@ -97,19 +97,8 @@ export const PracticeScreen: React.FC<PracticeScreenProps> = ({
     // Valid speech recognized -> reset consecutive no-speech counter
     setConsecutiveNoSpeechCount(0);
 
-    const studentWords = extractWords(transcript);
-    // Tolerance for plurals/simple variations
-    const missingKeyWords = turn.keyWords.filter((kw) => {
-      const t = kw.toLowerCase();
-      return !studentWords.some((w) => {
-        if (w === t) return true;
-        if (t === 'backpack' && (w === 'backpacks' || w === 'bag' || w === 'pack')) return true;
-        if (t === 'thank' && (w === 'thanks' || w === 'thanked')) return true;
-        if (t === 'help' && (w === 'helping' || w === 'helps')) return true;
-        if (t === 'book' && w === 'books') return true;
-        return false;
-      });
-    });
+    // Accepts close forms listed in the turn data (plurals, backpack/bag, thanks)
+    const missingKeyWords = findMissingKeyWords(transcript, turn);
 
     if (missingKeyWords.length === 0) {
       // Success!

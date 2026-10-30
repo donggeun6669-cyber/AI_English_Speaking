@@ -1,40 +1,60 @@
 import React from 'react';
-import { TurnRecord, RoundNumber } from '../types';
-import { SamHandingBagIllustration, SamAvatar } from './Illustrations';
+import { TurnRecord, RoundNumber, LostItem, Improvement, TurnResult } from '../types';
+import { SamHandingItemIllustration, SamAvatar } from './Illustrations';
+import { getTurnResult, summarizeRound } from '../utils/feedbackEngine';
+import { countStars } from '../utils/progress';
 
 interface ResultScreenProps {
+  item: LostItem;
   round: RoundNumber;
   records: TurnRecord[];
+  improvements: Improvement[];
   onNextRound?: () => void;
   onPracticeAgain: () => void;
   onHome: () => void;
 }
 
+// ✓ said on the first try · 💪 said after help · ↷ skipped (no scores or %)
+const RESULT_MARK: Record<TurnResult, { icon: string; label: string; className: string }> = {
+  first_try: { icon: '✓', label: '한 번에', className: 'text-emerald-700 bg-emerald-50' },
+  with_help: { icon: '💪', label: '다시 해서', className: 'text-blue-700 bg-blue-50' },
+  skipped: { icon: '↷', label: '건너뜀', className: 'text-slate-500 bg-slate-100' },
+};
+
+// Sparkles that burst out around the found item (direction in px)
+const SPARKLES = [
+  { x: -120, y: -50, delay: 0 },
+  { x: 120, y: -55, delay: 60 },
+  { x: -95, y: 45, delay: 120 },
+  { x: 100, y: 50, delay: 40 },
+  { x: -20, y: -85, delay: 90 },
+  { x: 30, y: 80, delay: 150 },
+];
+
 export const ResultScreen: React.FC<ResultScreenProps> = ({
+  item,
   round,
   records,
+  improvements,
   onNextRound,
   onPracticeAgain,
   onHome,
 }) => {
-  // Calculate star rules from Section 6:
+  const summary = summarizeRound(records);
+  const skippedCount = summary.skipped;
+
+  // Star rules from Section 6:
   // ⭐⭐⭐ Said all 5 sentences without skipping (any number of tries)
   // ⭐⭐ Skipped 1–2 sentences
   // ⭐ Finished the whole dialogue
-  const skippedCount = records.filter((r) => r.status === 'skipped').length;
-
-  let starDisplay = '⭐⭐⭐';
-  let starLabel = 'Said all 5 sentences!';
-  if (skippedCount === 0) {
-    starDisplay = '⭐⭐⭐';
-    starLabel = 'Said all 5 sentences!';
-  } else if (skippedCount <= 2) {
-    starDisplay = '⭐⭐';
-    starLabel = 'Finished with great effort!';
-  } else {
-    starDisplay = '⭐';
-    starLabel = 'Completed the whole dialogue!';
-  }
+  const stars = countStars(skippedCount);
+  const starDisplay = '⭐'.repeat(stars);
+  const starLabel =
+    stars === 3
+      ? 'Said all 5 sentences!'
+      : stars === 2
+      ? 'Finished with great effort!'
+      : 'Completed the whole dialogue!';
 
   // Section 3: One thing you did well + one next challenge
   const didWell =
@@ -81,16 +101,35 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
         <span className="text-[11px] font-bold tracking-wider uppercase text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200/60 mt-1">
           Round {round} Finished
         </span>
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight mt-1 animate-foundTitle">
           You found it!
         </h1>
         <p className="text-xs font-semibold text-slate-500 mt-0.5">
-          가방을 찾았어요!
+          {item.foundKo}
         </p>
 
-        {/* Sam handing back the blue bag illustration */}
-        <div className="w-full mt-1 mb-1">
-          <SamHandingBagIllustration className="w-full h-52" />
+        {/* Sam handing back the item, popping in with sparkles */}
+        <div className="relative w-full mt-1 mb-1">
+          <div className="animate-foundPop">
+            <SamHandingItemIllustration item={item} className="w-full h-48" />
+          </div>
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden="true">
+            {SPARKLES.map((s, i) => (
+              <span
+                key={i}
+                className="found-sparkle absolute text-xl"
+                style={
+                  {
+                    '--sx': `${s.x}px`,
+                    '--sy': `${s.y}px`,
+                    animationDelay: `${250 + s.delay}ms`,
+                  } as React.CSSProperties
+                }
+              >
+                ✨
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Stars */}
@@ -106,7 +145,7 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
 
       {/* Middle: Sam's Praise & Next Challenge + List of 5 sentences */}
       <div className="my-auto py-2">
-        {/* Sam's Praise: one thing you did well + one next challenge */}
+        {/* Sam's Praise: one thing you did well (+ what got better) + one next challenge */}
         <div className="bg-blue-50/80 border border-blue-200/80 rounded-2xl p-3 mb-2.5 flex items-start gap-2.5">
           <SamAvatar size={32} />
           <div className="text-xs space-y-1.5 flex-1">
@@ -118,6 +157,16 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
                 ({didWell.ko})
               </p>
             </div>
+            {improvements.map((imp) => (
+              <div key={imp.en}>
+                <p className="font-bold text-emerald-800 leading-snug">
+                  📈 {imp.en}
+                </p>
+                <p className="text-emerald-700/90 font-medium text-[11px]">
+                  ({imp.ko})
+                </p>
+              </div>
+            ))}
             <div className="pt-1.5 border-t border-blue-200/70">
               <p className="font-semibold text-slate-800 leading-snug">
                 {nextChallenge.en}
@@ -129,38 +178,40 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
           </div>
         </div>
 
+        {/* Count of each mark */}
+        <div className="flex items-center justify-center gap-3 text-[11px] font-semibold text-slate-500 mb-1.5">
+          <span>✓ 한 번에 {summary.firstTry}</span>
+          <span>💪 다시 해서 {summary.withHelp}</span>
+          <span>↷ 건너뜀 {summary.skipped}</span>
+        </div>
+
         {/* Sentence List */}
         <div className="bg-white rounded-2xl border border-slate-200/80 divide-y divide-slate-100 overflow-hidden shadow-xs">
-          {records.map((item, idx) => (
-            <div key={item.turnId} className="px-3 py-2 flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
-                  <span>Sentence {idx + 1}</span>
+          {records.map((record, idx) => {
+            const mark = RESULT_MARK[getTurnResult(record)];
+            return (
+              <div key={record.turnId} className="px-3 py-2 flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-medium">
+                    <span>Sentence {idx + 1}</span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
+                    &ldquo;{record.targetSentence}&rdquo;
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                    {record.targetSentenceKo}
+                  </p>
                 </div>
-                <p className="text-xs font-semibold text-slate-800 truncate mt-0.5">
-                  &ldquo;{item.targetSentence}&rdquo;
-                </p>
-                <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                  {item.targetSentenceKo}
-                </p>
-              </div>
 
-              {/* Status Mark: ✓ Said or ↷ Skipped (no scores or %) */}
-              <div className="shrink-0 flex items-center pt-1">
-                {item.status === 'said' ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                    <span>✓</span>
-                    <span>Said</span>
+                <div className="shrink-0 flex items-center pt-1">
+                  <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md ${mark.className}`}>
+                    <span>{mark.icon}</span>
+                    <span>{mark.label}</span>
                   </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                    <span>↷</span>
-                    <span>Skipped</span>
-                  </span>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

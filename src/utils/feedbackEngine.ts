@@ -1,4 +1,11 @@
-import { PracticeTurn, FeedbackInfo } from '../types';
+import {
+  PracticeTurn,
+  FeedbackInfo,
+  TurnRecord,
+  TurnResult,
+  RoundSummary,
+  Improvement,
+} from '../types';
 
 /**
  * Normalizes input text by removing punctuation and converting to lowercase words array.
@@ -13,19 +20,64 @@ export function extractWords(text: string): string[] {
 }
 
 /**
- * Checks if a word is contained in a word list, with slight tolerance for endings (e.g. plurals or ing).
+ * Checks if a key word (or one of its accepted forms, e.g. backpack/bag, thank/thanks) was said.
  */
-function wordMatches(targetWord: string, candidateWords: string[]): boolean {
+function wordMatches(targetWord: string, candidateWords: string[], turn: PracticeTurn): boolean {
   const t = targetWord.toLowerCase();
-  for (const c of candidateWords) {
-    if (c === t) return true;
-    // Simple tolerance for speech recognition variations (e.g. backpack/backpacks, thank/thanks)
-    if (t === 'backpack' && (c === 'backpacks' || c === 'bag' || c === 'pack')) return true;
-    if (t === 'thank' && (c === 'thanks' || c === 'thanked')) return true;
-    if (t === 'help' && (c === 'helping' || c === 'helps')) return true;
-    if (t === 'book' && c === 'books') return true;
+  const accepted = [t, ...(turn.keyWordAliases?.[t] ?? turn.keyWordAliases?.[targetWord] ?? [])];
+  return candidateWords.some((c) => accepted.includes(c));
+}
+
+/**
+ * Key words the student did not say, in sentence order.
+ */
+export function findMissingKeyWords(transcript: string, turn: PracticeTurn): string[] {
+  const studentWords = extractWords(transcript);
+  return turn.keyWords.filter((kw) => !wordMatches(kw, studentWords, turn));
+}
+
+/**
+ * ✓ first try · 💪 said after help · ↷ skipped
+ */
+export function getTurnResult(record: TurnRecord): TurnResult {
+  if (record.status === 'skipped') return 'skipped';
+  return record.tries === 0 ? 'first_try' : 'with_help';
+}
+
+export function summarizeRound(records: TurnRecord[]): RoundSummary {
+  const results = records.map(getTurnResult);
+  return {
+    firstTry: results.filter((r) => r === 'first_try').length,
+    withHelp: results.filter((r) => r === 'with_help').length,
+    skipped: results.filter((r) => r === 'skipped').length,
+  };
+}
+
+/**
+ * One positive line comparing this round with an earlier one, or null when nothing got better.
+ * Never reports a drop.
+ */
+export function describeImprovement(
+  current: RoundSummary,
+  previous: RoundSummary | undefined,
+  compareTo: { en: string; ko: string }
+): Improvement | null {
+  if (!previous) return null;
+  const fewerSkips = previous.skipped - current.skipped;
+  if (fewerSkips > 0) {
+    return {
+      en: `${fewerSkips} fewer skipped ${fewerSkips === 1 ? 'sentence' : 'sentences'} than ${compareTo.en}!`,
+      ko: `${compareTo.ko}보다 건너뛴 문장이 ${fewerSkips}개 줄었어요!`,
+    };
   }
-  return false;
+  const moreFirstTry = current.firstTry - previous.firstTry;
+  if (moreFirstTry > 0) {
+    return {
+      en: `${moreFirstTry} more ${moreFirstTry === 1 ? 'sentence' : 'sentences'} on the first try than ${compareTo.en}!`,
+      ko: `${compareTo.ko}보다 한 번에 말한 문장이 ${moreFirstTry}개 늘었어요!`,
+    };
+  }
+  return null;
 }
 
 /**
@@ -58,9 +110,7 @@ export function evaluateSpeech(
   const studentWords = extractWords(trimmed);
 
   // Check key words
-  const missingKeyWords = turn.keyWords.filter(
-    (kw) => !wordMatches(kw, studentWords)
-  );
+  const missingKeyWords = findMissingKeyWords(trimmed, turn);
 
   // If ALL key words are present, it is a SUCCESS!
   if (missingKeyWords.length === 0) {
